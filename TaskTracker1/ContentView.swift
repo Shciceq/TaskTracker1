@@ -1,43 +1,46 @@
-//
-//  ContentView.swift
-//  TaskTracker1
-//
-//  Created by Bohdan Harbuziuk on 5/14/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     @State private var showTasks = false
+    @AppStorage("isDarkMode") private var isDarkMode = false  // хранение темы
 
     var body: some View {
-        if showTasks {
-            TaskTrackerView(showTasks: $showTasks) // передаём binding
-        } else {
-            VStack(spacing: 20) {
-                Image("TaskTracker")
-                    .resizable()
-                    .frame(width: 100, height: 100)
-                Text("TaskTracker")
-                    .font(.largeTitle)
-                    .bold()
-                Button("Start") {
-                    showTasks = true
+        ZStack {
+            (isDarkMode ? Color.black : Color.white)
+                .ignoresSafeArea()
+
+            if showTasks {
+                TaskTrackerView(showTasks: $showTasks, isDarkMode: $isDarkMode)
+            } else {
+                VStack(spacing: 20) {
+                    Image("TaskTracker")
+                        .resizable()
+                        .frame(width: 100, height: 100)
+                    Text("TaskTracker")
+                        .font(.largeTitle)
+                        .bold()
+                        .foregroundColor(isDarkMode ? .white : .black)
+                    Button("Start") {
+                        showTasks = true
+                    }
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
                 }
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
             }
         }
+        .preferredColorScheme(isDarkMode ? .dark : .light) // меняем цветовую схему
     }
 }
 
 struct TaskTrackerView: View {
-    @Binding var showTasks: Bool // получаем binding из ContentView
+    @Binding var showTasks: Bool
+    @Binding var isDarkMode: Bool
 
     @State private var taskText = ""
     @State private var tasks: [String] = []
+    @State private var showSettings = false
 
     var body: some View {
         VStack {
@@ -46,9 +49,21 @@ struct TaskTrackerView: View {
                     showTasks = false
                 }
                 .padding()
-                .foregroundColor(.blue)
-                
+                .foregroundColor(isDarkMode ? .white : .blue)
+
                 Spacer()
+
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title2)
+                        .foregroundColor(isDarkMode ? .white : .blue)
+                }
+                .padding()
+                .sheet(isPresented: $showSettings) {
+                    SettingsView(isDarkMode: $isDarkMode)
+                }
             }
 
             HStack {
@@ -67,9 +82,44 @@ struct TaskTrackerView: View {
             List {
                 ForEach(tasks, id: \.self) { task in
                     Text(task)
+                        .foregroundColor(isDarkMode ? .white : .black)
                 }
                 .onDelete { indexSet in
                     tasks.remove(atOffsets: indexSet)
+                }
+            }
+            .listStyle(PlainListStyle())
+        }
+        .background(isDarkMode ? Color.black : Color.white)
+        .ignoresSafeArea(edges: .bottom)
+    }
+}
+
+struct SettingsView: View {
+    @Binding var isDarkMode: Bool
+    @Environment(\.presentationMode) var presentationMode
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("About App")) {
+                    Text("TaskTracker v1.0")
+                    Text("Created by Bohdan Harbuziuk")
+                    Text("This app helps you manage your tasks easily.")
+                }
+
+                Section(header: Text("Appearance")) {
+                    Toggle(isOn: $isDarkMode) {
+                        Text("Dark Mode")
+                    }
+                }
+            }
+            .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
                 }
             }
         }
